@@ -19,10 +19,9 @@ import { Link as RouterLink } from 'react-router-dom'
 type Props = {
   rows: Employee[]
   setRows: Dispatch<SetStateAction<Employee[]>>
-  onSave?: () => void
 }
 
-export default function EmployeesTableEditable({ rows, setRows, onSave }: Props) {
+export default function EmployeesTableEditable({ rows, setRows }: Props) {
 
   const updateCell = (index: number, field: keyof Employee, value: string) => {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)))

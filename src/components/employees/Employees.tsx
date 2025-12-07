@@ -31,7 +31,7 @@ export default function Employees() {
           Save All
         </Button>
       </Box>
-      <EmployeesTableEditable rows={rows} setRows={setRows} onSave={onSave} />
+      <EmployeesTableEditable rows={rows} setRows={setRows} />
     </Box>
   )
 }
