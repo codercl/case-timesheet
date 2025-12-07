@@ -9,7 +9,7 @@ import { useState } from 'react'
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/case-timesheet">
       <Box sx={{ display: 'flex', height: '100vh' }}>
         {/* Drawer open button */}
         <IconButton
