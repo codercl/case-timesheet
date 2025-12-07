@@ -4,4 +4,6 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Set base for GitHub Pages project site deployment (update if repo name differs)
+  base: '/case-timesheet/',
 })
