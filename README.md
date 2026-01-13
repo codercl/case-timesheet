@@ -32,6 +32,20 @@ This app provides a simple employee management and weekly timesheet system built
 3. Open the app:
    - `http://localhost:5173/`
 
+## Testing
+
+### Unit Tests
+```bash
+npm run test
+```
+
+### E2E Tests
+```bash
+npm run test:e2e
+```
+
+**Note:** E2E tests require the dev server to be running (`npm run dev`) before execution.
+
 ## Usage Tips
 - Employees:
   - Edit `Name` and `Role`, toggle `Status`, then click “Save All” to persist.

@@ -1,14 +1,6 @@
-export type ActivityType = 'checkIn' | 'break' | 'checkOut' | 'work'
+import type { TimeLog } from '../types';
 
-export type TimeLog = {
-  id: number
-  date: string // ISO date YYYY-MM-DD
-  hours: number
-  description: string
-  employeeId: number
-  activity?: ActivityType
-  timestamp?: string // ISO timestamp for check-in/out events
-}
+export type { TimeLog } from '../types';
 
 export const sampleTimeLogs: TimeLog[] = [
   { id: 1, date: new Date().toISOString().slice(0, 10), hours: 8, description: 'Development work', employeeId: 1 },
@@ -23,7 +15,7 @@ export function loadTimeLogs(): TimeLog[] {
     if (!raw) return sampleTimeLogs
     const parsed = JSON.parse(raw) as TimeLog[]
     return parsed
-  } catch (_e) {
+  } catch {
     return sampleTimeLogs
   }
 }
@@ -31,7 +23,7 @@ export function loadTimeLogs(): TimeLog[] {
 export function saveTimeLogs(logs: TimeLog[]) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(logs))
-  } catch (_e) {
+  } catch {
     // ignore
   }
 }

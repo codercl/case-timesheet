@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
     Box,
@@ -21,30 +21,35 @@ export default function SearchTimeSheet() {
 
     const [selectedType, setSelectedType] = useState<string | ''>('')
     const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null)
+    const initialized = useRef(false)
     
     // Initialize from URL on mount
     const location = useLocation()
     useEffect(() => {
+      if (initialized.current) return
+      initialized.current = true
+      
       const pathParts = location.pathname.split('/')
       const timesheetIndex = pathParts.indexOf('timesheet')
       const empIdStr = timesheetIndex >= 0 && timesheetIndex + 1 < pathParts.length ? pathParts[timesheetIndex + 1] : ''
       const empId = empIdStr ? Number(empIdStr) : null
       
       if (empId) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedType('id')
         const emp = employees.find((x) => x.id === empId) ?? null
         setSelectedEmp(emp)
       }
-    }, [employees])
+    }, [employees, location.pathname])
 
 
-    const handleSelectChange = (e: any) => {
-        const val = e.target.value as string
-        setSelectedType(val)
+    const handleSelectChange = (_e: React.SyntheticEvent | Event, val: unknown) => {
+        const stringVal = val as string
+        setSelectedType(stringVal)
         setSelectedEmp(null)
     }
 
-    const handleAutoChange = (_: any, value: number | string | null) => {
+    const handleAutoChange = (_e: React.SyntheticEvent, value: number | string | null) => {
         if (selectedType === 'id') {
             const id = value ? Number(value) : null
             const emp = employees.find((x) => x.id === id) ?? null

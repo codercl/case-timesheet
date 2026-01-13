@@ -1,22 +1,9 @@
 import EmployeesTableEditable from './EmployeesTableEditable'
 import { Box, Typography, Button } from '@mui/material'
-import { useState } from 'react'
-import type { Employee } from '../../data/employees'
-import { loadEmployees, saveEmployees } from '../../data/employees'
+import { useEmployees } from '../../hooks/useEmployees'
 
 export default function Employees() {
-  const [rows, setRows] = useState<Employee[]>(loadEmployees())
-
-  const addEmployee = () => {
-    setRows((prev) => {
-      const nextId = prev.length ? Math.max(...prev.map((p) => p.id ?? 0)) + 1 : 1
-      return [...prev, { id: nextId, name: '', role: '', status: 'active' }]
-    })
-  }
-
-  const onSave = () => {
-    saveEmployees(rows)
-  }
+  const { employees, setEmployees, addEmployee, saveEmployees, isSaving } = useEmployees()
 
   return (
     <Box>
@@ -27,11 +14,11 @@ export default function Employees() {
         <Button variant="contained" color="primary" onClick={addEmployee}>
           Add Employee
         </Button>
-        <Button variant="outlined" color="secondary" onClick={onSave}>
+        <Button variant="outlined" color="secondary" onClick={saveEmployees} disabled={isSaving}>
           Save All
         </Button>
       </Box>
-      <EmployeesTableEditable rows={rows} setRows={setRows} />
+      <EmployeesTableEditable rows={employees} setRows={setEmployees} />
     </Box>
   )
 }

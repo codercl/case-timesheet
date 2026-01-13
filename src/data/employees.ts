@@ -1,10 +1,6 @@
+import type { Employee } from '../types';
 
-export type Employee = {
-  id: number;
-  name: string;
-  role: string;
-  status: 'active' | 'inactive';
-};
+export type { Employee } from '../types';
 
 export const sampleEmployees: Employee[] = [
   { id: 1, name: 'Alice Johnson', role: 'Software Engineer', status: 'active' },
@@ -20,7 +16,7 @@ export function loadEmployees(): Employee[] {
     if (!raw) return sampleEmployees
     const parsed = JSON.parse(raw) as Employee[]
     return parsed
-  } catch (_e) {
+  } catch {
     return sampleEmployees
   }
 }
@@ -28,7 +24,7 @@ export function loadEmployees(): Employee[] {
 export function saveEmployees(employees: Employee[]) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(employees))
-  } catch (_e) {
+  } catch {
     // ignore
   }
 }
