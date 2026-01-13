@@ -70,11 +70,11 @@ npm run test:e2e
 ## Accessibility
 - Form fields include visible labels to satisfy “every form element has a label”.
 - Button states convey session availability (disabled when action is invalid).
+- First Pass by Accessibility Insight for Web
 
 ## Known Limitations / TODO
 - Employees table: pagination and sorting are not implemented.
-- No backend; data is client-side only via `localStorage`.
-- Time calculations assume events occur in-order within the same day.
+- No backend and No State Management in Frontend; data is client-side only via `localStorage`.
 - No time zone configuration; times use browser locale.
 
 ## Tech Stack
