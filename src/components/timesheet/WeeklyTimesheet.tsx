@@ -11,7 +11,12 @@ import {
   Button,
   Typography,
   Stack,
+  IconButton,
+  Dialog,
+  TextField,
 } from '@mui/material'
+import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
 import { useLocation } from 'react-router-dom'
 import { loadTimeLogs, saveTimeLogs } from '../../data/timelogs'
 import { loadEmployees } from '../../data/employees'
@@ -32,6 +37,9 @@ export default function WeeklyTimesheet({ selectedDate }: Props) {
   const [logs, setLogs] = useState<TimeLog[]>(loadTimeLogs())
   const employees: Employee[] = useMemo(() => loadEmployees(), [])
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | undefined>()
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingLog, setEditingLog] = useState<TimeLog | null>(null)
+  const [editTime, setEditTime] = useState('')
 
   const location = useLocation()
   useEffect(() => {
@@ -69,6 +77,11 @@ export default function WeeklyTimesheet({ selectedDate }: Props) {
     return employees.some((emp) => emp.id === selectedEmployeeId)
   }, [selectedEmployeeId, employees])
 
+  const today = useMemo(() => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  }, [])
+
   const getLogsForDay = (day: Date) => {
     const dateStr = day.toISOString().slice(0, 10)
     return logs.filter(
@@ -102,17 +115,37 @@ export default function WeeklyTimesheet({ selectedDate }: Props) {
       }
     }
 
-    const hours = totalMs / (1000 * 60 * 60)
-    return hours.toFixed(2)
+    const totalSeconds = Math.floor(totalMs / 1000)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
   }
 
   const weeklyTotalHours = useMemo(() => {
-    let total = 0
+    let totalMs = 0
     for (const day of weekDays) {
-      const hours = parseFloat(getTotalHours(day))
-      total += hours
+      const events = getEventLogsForDay(day)
+      let currentCheckIn: number | null = null
+
+      for (const e of events) {
+        const ts = new Date(e.timestamp as string).getTime()
+        if (e.activity === 'checkIn') {
+          currentCheckIn = ts
+        } else if (e.activity === 'checkOut') {
+          if (currentCheckIn != null && ts >= currentCheckIn) {
+            totalMs += ts - currentCheckIn
+            currentCheckIn = null
+          }
+        }
+      }
     }
-    return total.toFixed(2)
+    
+    const totalSeconds = Math.floor(totalMs / 1000)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
   }, [weekDays, logs])
 
   const hasOpenCheckIn = (day: Date) => {
@@ -163,6 +196,39 @@ export default function WeeklyTimesheet({ selectedDate }: Props) {
     saveTimeLogs(updated)
   }
 
+  const handleDeleteLog = (logId: number) => {
+    const updated = logs.filter((l) => l.id !== logId)
+    setLogs(updated)
+    saveTimeLogs(updated)
+  }
+
+  const handleEditLog = (log: TimeLog) => {
+    setEditingLog(log)
+    const date = new Date(log.timestamp || '')
+    setEditTime(date.toISOString().slice(0, 16))
+    setEditDialogOpen(true)
+  }
+
+  const handleSaveEdit = () => {
+    if (!editingLog) return
+    const updated = logs.map((l) =>
+      l.id === editingLog.id
+        ? { ...l, timestamp: new Date(editTime).toISOString() }
+        : l
+    )
+    setLogs(updated)
+    saveTimeLogs(updated)
+    setEditDialogOpen(false)
+    setEditingLog(null)
+    setEditTime('')
+  }
+
+  const handleCancelEdit = () => {
+    setEditDialogOpen(false)
+    setEditingLog(null)
+    setEditTime('')
+  }
+
   if (!employeeExists) {
     return null
   }
@@ -172,6 +238,22 @@ export default function WeeklyTimesheet({ selectedDate }: Props) {
       <Typography variant="h6" gutterBottom>
         Weekly Timesheet
       </Typography>
+      <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+        <Button 
+          variant="contained" 
+          onClick={() => handleCheckIn(selectedDate || today)}
+          disabled={hasOpenCheckIn(selectedDate || today)}
+        >
+          Check-in
+        </Button>
+        <Button 
+          variant="outlined" 
+          onClick={() => handleCheckOut(selectedDate || today)}
+          disabled={!hasOpenCheckIn(selectedDate || today)}
+        >
+          Check-out
+        </Button>
+      </Stack>
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
@@ -180,7 +262,6 @@ export default function WeeklyTimesheet({ selectedDate }: Props) {
               <TableCell>Check-in</TableCell>
               <TableCell>Check-out</TableCell>
               <TableCell>Total Hours</TableCell>
-              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -189,14 +270,20 @@ export default function WeeklyTimesheet({ selectedDate }: Props) {
                 <TableCell>{day.toLocaleDateString()}</TableCell>
                 <TableCell sx={{ verticalAlign: 'top' }}>
                   {(() => {
-                    const times = getEventLogsForDay(day)
-                      .filter((l) => l.activity === 'checkIn' && !!l.timestamp)
-                      .map((l) => new Date(l.timestamp as string).toLocaleTimeString())
-                    if (!times.length) return <Typography variant="body2">—</Typography>
+                    const logs = getEventLogsForDay(day).filter((l) => l.activity === 'checkIn' && !!l.timestamp)
+                    if (!logs.length) return <Typography variant="body2">—</Typography>
                     return (
                       <Stack direction="column" spacing={0.5}>
-                        {times.map((t, i) => (
-                          <Typography key={i} variant="body2">{t}</Typography>
+                        {logs.map((log, i) => (
+                          <Stack key={i} direction="row" spacing={0.5} alignItems="center">
+                            <Typography variant="body2">{new Date(log.timestamp as string).toLocaleTimeString()}</Typography>
+                            <IconButton size="small" onClick={() => handleEditLog(log)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => handleDeleteLog(log.id)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
                         ))}
                       </Stack>
                     )
@@ -204,30 +291,26 @@ export default function WeeklyTimesheet({ selectedDate }: Props) {
                 </TableCell>
                 <TableCell sx={{ verticalAlign: 'top' }}>
                   {(() => {
-                    const times = getEventLogsForDay(day)
-                      .filter((l) => l.activity === 'checkOut' && !!l.timestamp)
-                      .map((l) => new Date(l.timestamp as string).toLocaleTimeString())
-                    if (!times.length) return <Typography variant="body2">—</Typography>
+                    const logs = getEventLogsForDay(day).filter((l) => l.activity === 'checkOut' && !!l.timestamp)
+                    if (!logs.length) return <Typography variant="body2">—</Typography>
                     return (
                       <Stack direction="column" spacing={0.5}>
-                        {times.map((t, i) => (
-                          <Typography key={i} variant="body2">{t}</Typography>
+                        {logs.map((log, i) => (
+                          <Stack key={i} direction="row" spacing={0.5} alignItems="center">
+                            <Typography variant="body2">{new Date(log.timestamp as string).toLocaleTimeString()}</Typography>
+                            <IconButton size="small" onClick={() => handleEditLog(log)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => handleDeleteLog(log.id)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
                         ))}
                       </Stack>
                     )
                   })()}
                 </TableCell>
-                <TableCell>{getTotalHours(day)}h</TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={1}>
-                    <Button size="small" variant="contained" onClick={() => handleCheckIn(day)} disabled={hasOpenCheckIn(day)}>
-                      Check-in
-                    </Button>
-                    <Button size="small" variant="outlined" onClick={() => handleCheckOut(day)} disabled={!hasOpenCheckIn(day)}>
-                      Check-out
-                    </Button>
-                  </Stack>
-                </TableCell>
+                <TableCell>{getTotalHours(day)}</TableCell>
               </TableRow>
             ))}
             <TableRow sx={{ backgroundColor: 'action.hover' }}>
@@ -241,11 +324,32 @@ export default function WeeklyTimesheet({ selectedDate }: Props) {
                   {weeklyTotalHours}h
                 </Typography>
               </TableCell>
-              <TableCell />
             </TableRow>
           </TableBody>
         </Table>
       </TableContainer>
+      <Dialog open={editDialogOpen} onClose={handleCancelEdit}>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Edit Time
+          </Typography>
+          <TextField
+            type="datetime-local"
+            value={editTime}
+            onChange={(e) => setEditTime(e.target.value)}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" onClick={handleSaveEdit}>
+              Save
+            </Button>
+            <Button variant="outlined" onClick={handleCancelEdit}>
+              Cancel
+            </Button>
+          </Stack>
+        </Box>
+      </Dialog>
     </Box>
   )
 }
